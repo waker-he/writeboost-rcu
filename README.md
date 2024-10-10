@@ -1,10 +1,10 @@
-# WriteBoost RCU: An RCU Library that Enhances Write-Side Performance
+# WriteBoost RCU
 
 ## Build and Run
 
 ```sh
 # install dependencies
-sudo sh install-deps.sh
+sh install-deps.sh
 conan install . --build=missing
 
 # build
