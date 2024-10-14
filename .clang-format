@@ -62,4 +62,3 @@ SortUsingDeclarations: LexicographicNumeric
 SpaceAfterTemplateKeyword: true
 SpaceAroundPointerQualifiers: Both
 SpaceBeforeCpp11BracedList: false
-...
