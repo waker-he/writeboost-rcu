@@ -9,12 +9,17 @@ project(WRITE_BOOST_RCU LANGUAGES CXX)
 
 include(cmake/clang_format.cmake)
 
+# Dependencies
+find_package(folly REQUIRED)
+find_package(Boost REQUIRED)
+
 # -------------------------------------------------------------------
 #                       Library definition
 add_library(wbrcu INTERFACE)
 set(WBRCU_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 target_include_directories(wbrcu INTERFACE ${WBRCU_INCLUDE_DIR})
 target_compile_features(wbrcu INTERFACE cxx_std_20)
+target_link_libraries(wbrcu INTERFACE folly::folly boost::boost)
 
 
 add_subdirectory(test)
