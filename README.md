@@ -13,5 +13,5 @@ cmake ../.. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUIL
 cmake --build .
 
 # run
-./test/test
+test/test_rcu_protected
 ```
