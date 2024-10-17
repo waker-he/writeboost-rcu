@@ -40,8 +40,8 @@ public:
     get_ptr() noexcept
     {
         rcu_read_lock();
-        auto deleter = [&](T*) { rcu_read_unlock(); };
-        return std::unique_ptr<T, decltype(deleter)>(
+        auto deleter = [&](T const*) { rcu_read_unlock(); };
+        return std::unique_ptr<T const, decltype(deleter)>(
             m_ptr.load(std::memory_order_acquire), deleter
         );
     }
