@@ -19,9 +19,12 @@ endif()
 
 add_compile_definitions(WBRCU_HARDWARE_CONCURRENCY=${N})
 
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG -flto -ffast-math -march=native")
+
 # Dependencies
 find_package(folly REQUIRED)
 find_package(GTest REQUIRED)
+find_package(benchmark REQUIRED)
 
 # -------------------------------------------------------------------
 #                       Library definition
@@ -33,3 +36,4 @@ target_link_libraries(wbrcu INTERFACE folly::folly)
 
 
 add_subdirectory(test)
+add_subdirectory(benchmark)
