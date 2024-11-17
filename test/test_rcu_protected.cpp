@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
-#include "wbrcu/rcu_protected.hpp" // Replace with the actual header name
+#include "wbrcu/rcu_protected.hpp"
 
 class RCUTest : public ::testing::Test {
 protected:
