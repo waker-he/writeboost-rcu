@@ -11,3 +11,4 @@ function(add_test NAME)
 endfunction()
 
 add_test(rcu_protected)
+add_test(rand)

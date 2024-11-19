@@ -14,7 +14,11 @@ cmake --build .
 
 # run test
 test/test_rcu_protected
+test/test_rand
 
 # run benchmark
-benchmark/benchmark_rcu_protected --benchmark_counters_tabular=true
+benchmark/bm_num_threads --benchmark_counters_tabular=true
+benchmark/bm_workload --benchmark_counters_tabular=true
+benchmark/bm_rw_ratio --benchmark_counters_tabular=true
+benchmark/bm_sizeof_data --benchmark_counters_tabular=true
 ```

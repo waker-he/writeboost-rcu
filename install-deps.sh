@@ -1,5 +1,6 @@
 #!/bin/sh
 
+sudo apt install gcc
 sudo apt install cmake
 sudo apt install python3
 sudo apt install python3-pip

@@ -9,19 +9,38 @@
 #include <concepts>
 #include <functional>
 #include <memory>
+#include <source_location>
 
 namespace wbrcu
 {
 
 inline constexpr uint64_t hardware_concurrency = WBRCU_HARDWARE_CONCURRENCY;
 
-struct DefaultTag
+// Generate compile-time random number with seeding from source location
+consteval uint64_t rand(std::source_location const& loc = std::source_location::current()) {
+    // Combine line, column and file_name hash
+    uint64_t seed = loc.line();
+    seed ^= loc.column() << 16;
+    
+    // Simple string hash for file name
+    const char* str = loc.file_name();
+    uint64_t hash = 0;
+    for (const char* p = str; *p; ++p) {
+        hash = hash * 31 + static_cast<unsigned char>(*p);
+    }
+
+    return seed ^ hash;
+}
+
+template <typename T, uint64_t TagId>
+struct ThreadLocalTag
 {
 };
 
-template <typename T, typename Tag = DefaultTag>
+template <typename T, uint64_t TagId = 0, uint64_t flushingThreshold = 20>
 class rcu_protected
 {
+    using Tag = ThreadLocalTag<T, TagId>;
 public:
     explicit rcu_protected(T* ptr) : m_ptr{ptr} {}
 
@@ -94,7 +113,7 @@ private:
     std::atomic<uint64_t> m_updateCnt{0};
     // Queue of updates to perform.
     folly::MPMCQueue<folly::Function<void(T*)>> m_updateQueue{
-        hardware_concurrency * 2
+        500 * hardware_concurrency
     };
 
     void
@@ -149,12 +168,20 @@ private:
         auto updateCnt = m_updateCnt.load(std::memory_order_relaxed);
         while (true)
         {
+            uint64_t unflushed = 0;
             do {
                 while (done < updateCnt)
                 {
                     m_updateQueue.blockingRead(updateToDo);
                     updateToDo(copied);
                     ++done;
+                    if (++unflushed == flushingThreshold) {
+                        break;
+                    }
+                }
+
+                if (unflushed == flushingThreshold) {
+                    break;
                 }
                 updateCnt = m_updateCnt.load(std::memory_order_relaxed);
             } while (done != updateCnt);
@@ -165,7 +192,7 @@ private:
 
             // Check if there is new updates enqueued after we retire the old
             // pointer
-            if (m_updateCnt.compare_exchange_strong(
+            if (done == updateCnt && m_updateCnt.compare_exchange_strong(
                     updateCnt,
                     0,
                     std::memory_order_release,
