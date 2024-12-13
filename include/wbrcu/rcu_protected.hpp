@@ -358,19 +358,18 @@ private:
         static const uint64_t cleanupThreshold = hardware_concurrency/(max_node+1);
         bool curr = m_epoch, prev = !curr;
         if(is_numa_available){
-            auto& retireLists = m_node_retireLists[node];
-            retireLists[curr].push_back(ptr);
-            if (retireLists[curr].size() >= cleanupThreshold 
-                && m_counters.epochIsClear(!m_epoch)) {
-                if(is_numa_available){
-                    std::swap(m_node_finished[node], retireLists[prev]);
-                }
-                for (auto p : retireLists[prev]) {
-                    numa_free(p, sizeof(T)); 
-                }
-                retireLists[prev].clear();
-                m_epoch.store(prev);
+            //auto& retireLists = m_node_retireLists[node];
+            m_node_retireLists[node][curr].push_back(ptr);
+            if (m_node_retireLists[node][curr].size() < cleanupThreshold 
+                || !m_counters.epochIsClear(prev)) {
+                return;
             }
+            std::swap(m_node_finished[node], m_node_retireLists[node][prev]);            
+            for (auto p : m_node_retireLists[node][prev]) {
+                numa_free(p, sizeof(T)); 
+            }
+            m_node_retireLists[node][prev].clear();
+            m_epoch.store(prev);
         }else{
             m_retireLists[curr].push_back(ptr);
             if (m_retireLists[curr].size() < cleanupThreshold
