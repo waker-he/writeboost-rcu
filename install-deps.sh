@@ -3,6 +3,7 @@
 sudo apt update
 sudo apt install gcc
 sudo apt install cmake
+sudo apt install numactl libnuma-dev
 sudo apt install python3
 sudo apt install python3-pip
 sudo pip install conan

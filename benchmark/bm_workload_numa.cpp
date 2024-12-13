@@ -1,7 +1,10 @@
 #include <thread>
 #include <vector>
 #include <iostream>
-
+#include <pthread.h>
+#include <sched.h>
+#include <numa.h>
+#include <numaif.h>
 #include "common.hpp"
 #include "wbrcu/rcu_protected.hpp"
 #include "benchmark/benchmark.h"
@@ -29,7 +32,26 @@ class MutexFixture : public benchmark::Fixture {
 public:
     lock_protected<ProtectedType> p{new ProtectedType{}};
 };
+void bind_thread_to_node(int numa_node) {
+    cpu_set_t cpu_set;
+    CPU_ZERO(&cpu_set);
 
+    struct bitmask *cpus = numa_allocate_cpumask();
+    numa_node_to_cpus(numa_node, cpus);
+
+    for (int i = 0; i < cpus->size; ++i) {
+        if (numa_bitmask_isbitset(cpus, i)) {
+            CPU_SET(i, &cpu_set);
+        }
+    }
+
+    pthread_t thread = pthread_self();
+    if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set) != 0) {
+        std::cerr << "Failed to set thread affinity to NUMA node " << numa_node << "\n";
+    }
+
+    numa_free_cpumask(cpus);
+}
 void simulate_work(int nanoseconds) {
     auto start = std::chrono::high_resolution_clock::now();
     while (std::chrono::high_resolution_clock::now() - start < std::chrono::nanoseconds(nanoseconds)) {
@@ -39,6 +61,8 @@ void simulate_work(int nanoseconds) {
 constexpr static int read_iterations = 1000;
 
 BENCHMARK_TEMPLATE_DEFINE_F(WBRCUFixture, WBRCU_ProtectInt_Reader, uint64_t)(benchmark::State& state) {
+    int numa_node = state.thread_index() % numa_num_configured_nodes();  
+    bind_thread_to_node(numa_node);
     uint64_t read_ops = 0;
     for (auto _ : state) {
         int k;
@@ -53,6 +77,8 @@ BENCHMARK_TEMPLATE_DEFINE_F(WBRCUFixture, WBRCU_ProtectInt_Reader, uint64_t)(ben
 }
 
 BENCHMARK_TEMPLATE_DEFINE_F(FollyRCUFixture, FollyRCU_ProtectInt_Reader, uint64_t)(benchmark::State& state) {
+    int numa_node = state.thread_index() % numa_num_configured_nodes();  
+    bind_thread_to_node(numa_node);
     uint64_t read_ops = 0;
     for (auto _ : state) {
         int k;
@@ -67,6 +93,8 @@ BENCHMARK_TEMPLATE_DEFINE_F(FollyRCUFixture, FollyRCU_ProtectInt_Reader, uint64_
 }
 
 BENCHMARK_TEMPLATE_DEFINE_F(SharedMutexFixture, SharedMutex_ProtectInt_Reader, uint64_t)(benchmark::State& state) {
+    int numa_node = state.thread_index() % numa_num_configured_nodes();  
+    bind_thread_to_node(numa_node);
     uint64_t read_ops = 0;
     for (auto _ : state) {
         int k;
@@ -81,6 +109,8 @@ BENCHMARK_TEMPLATE_DEFINE_F(SharedMutexFixture, SharedMutex_ProtectInt_Reader, u
 }
 
 BENCHMARK_TEMPLATE_DEFINE_F(MutexFixture, Mutex_ProtectInt_Reader, uint64_t)(benchmark::State& state) {
+    int numa_node = state.thread_index() % numa_num_configured_nodes();  
+    bind_thread_to_node(numa_node);
     uint64_t read_ops = 0;
     for (auto _ : state) {
         int k;
